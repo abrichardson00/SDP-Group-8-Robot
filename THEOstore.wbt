@@ -3,8 +3,8 @@ WorldInfo {
   coordinateSystem "NUE"
 }
 Viewpoint {
-  orientation -0.17060994352542383 -0.9497410201495932 -0.262458076300695 2.05843873018216
-  position -2.8604249820506014 2.132303530867589 -1.097171968181518
+  orientation -0.19946153612140607 -0.9674407484450487 -0.15579953098829544 1.3966547675842471
+  position -2.3735698968982737 1.3465464505583364 0.6810097029380214
 }
 TexturedBackground {
 }
@@ -15,28 +15,32 @@ RectangleArena {
   wallThickness 1e-09
   wallHeight 1e-05
 }
-RoCKInShelf {
-  translation 0.27 0.01 0
-}
-RoCKInShelf {
-  translation 0.27 0.01 0.63
-  name "RoCKIn shelf(1)"
-}
-RoCKInShelf {
-  translation 0.27 0.01 -0.65
-  name "RoCKIn shelf(2)"
-}
-RoCKInShelf {
-  translation 0.27 0.53 0
-  name "RoCKIn shelf(3)"
-}
-RoCKInShelf {
-  translation 0.27 0.53 0.63
-  name "RoCKIn shelf(4)"
-}
-RoCKInShelf {
-  translation 0.27 0.52 -0.65
-  name "RoCKIn shelf(5)"
+DEF SHELVES Group {
+  children [
+    RoCKInShelf {
+      translation 0.31 0.01 0
+    }
+    RoCKInShelf {
+      translation 0.31 0.01 0.63
+      name "RoCKIn shelf(1)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.01 -0.65
+      name "RoCKIn shelf(2)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.53 0
+      name "RoCKIn shelf(3)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.53 0.63
+      name "RoCKIn shelf(4)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.52 -0.65
+      name "RoCKIn shelf(5)"
+    }
+  ]
 }
 Robot {
   translation 0.040322 0.0306035 -0.000307
@@ -149,13 +153,18 @@ Robot {
                 staticFriction 10
               }
               device [
+                PositionSensor {
+                  name "VertPos"
+                }
                 Brake {
                   name "vertical brake"
                 }
                 LinearMotor {
                   name "vertical linear motor"
+                  acceleration 0.15
+                  maxVelocity 0.4
                   maxPosition 0.9
-                  maxForce 7
+                  maxForce 1
                 }
               ]
               endPoint Solid {
@@ -167,17 +176,53 @@ Robot {
                         jointParameters JointParameters {
                         }
                         device [
+                          PositionSensor {
+                            name "HoriPos"
+                          }
                           Brake {
                             name "horizontal brake"
                           }
                           LinearMotor {
                             name "horizontal linear motor"
+                            acceleration 0.06
+                            maxVelocity 1
                             minPosition -0.98
-                            maxPosition 0.75
+                            maxPosition 0.6
+                            maxForce 1
                           }
                         ]
                         endPoint DEF HORIZ_MOVER Solid {
                           children [
+                            SliderJoint {
+                              jointParameters JointParameters {
+                                axis 1 0 0
+                              }
+                              device [
+                                PositionSensor {
+                                }
+                                LinearMotor {
+                                  name "FrontBackSelector"
+                                  minPosition -0.05
+                                  maxPosition 0.05
+                                }
+                              ]
+                              endPoint Solid {
+                                translation -0.01 0 0.22
+                                children [
+                                  Shape {
+                                    appearance Appearance {
+                                      material Material {
+                                        diffuseColor 0.1 0.8 0.1
+                                        emissiveColor 0 0.6 0
+                                      }
+                                    }
+                                    geometry DEF FRONTBACK_BOX Box {
+                                      size 0.3 0.05 0.05
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                             Shape {
                               appearance Appearance {
                                 material Material {
@@ -457,8 +502,8 @@ DEF GANTRY Robot {
               }
             ]
             endPoint Solid {
-              translation -1.4496940193382377e-06 0.11 -0.05999999998289043
-              rotation 0 0.9999999999999999 0 1.5708204883669643
+              translation -1.4496940193382193e-06 0.11 -0.05999999998288975
+              rotation 0 0.9999999999999999 0 1.570820488366949
               children [
                 DEF TURRET_SHAPE Shape {
                   appearance USE WHEEL_APPEARANCE
