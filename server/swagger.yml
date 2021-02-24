@@ -8,13 +8,16 @@ consumes:
 produces:
   - application/json
 
+host: localhost:5000
 basePath: /api
+schemes:
+  - http
 
 # Paths supported by the server application
 paths:
   /images/{tray_name}:
     get:
-      operationId: trays.read_image
+      operationId: server.read_image
       tags:
         - Images
       summary: Gets the image of the specified tray
@@ -30,7 +33,7 @@ paths:
           description: Return a png image          
   /trays:
     get:
-      operationId: trays.read_all
+      operationId: server.read_all
       tags:
         - Trays
       summary: Read the entire list of trays
@@ -56,7 +59,7 @@ paths:
                   type: string
   /trays/{name}:
     get:
-      operationId: trays.read_one
+      operationId: server.read_one
       tags:
         - Trays
       summary: Read one tray from the tray list
@@ -84,7 +87,7 @@ paths:
                 type: string
 
     put:
-      operationId: trays.update
+      operationId: server.update
       tags:
         - Trays
       summary: Update a tray in the tray list
