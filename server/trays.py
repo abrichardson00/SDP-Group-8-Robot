@@ -32,6 +32,7 @@ def update_tray_json_file(tray_name):
     json.dump(data, open(json_file_path, 'w'))
 
 
+
 # Data to serve with our API
 TRAYS = load_tray_data()
 
@@ -52,6 +53,9 @@ def read_image(tray_name):
             404, "Tray with name '{name}' not found".format(name=tray_name)
         )
     
+### a wee helper function used below
+def num_word_matches(search_words, tray_info_words):
+            return sum([1 if (word in search_words) else 0 for word in tray_info_words])
 
 def read_all(search):
     """
@@ -61,12 +65,23 @@ def read_all(search):
     """
     if search == "":
         print("No searching for items")
+        # Create the list of trays from our data
+        return [TRAYS[key] for key in sorted(TRAYS.keys())] # return this sorted by tray name i.e. A, B, C ,... or 1, 2, 3, ...
     else:
-        print("We gonna search for an appropriate tray")
-        ### I'll implement some sort of search here which will determine the order of the list of tray jsons which we return ###
+        search_words = search.split() # get a list of individual words
+
+        # TODO: probably want something which removes any basic word ('a', 'the', ...) from search_words
+        #       since these might give loads of unwanted matches in our search
+
+        # get a list of tuples: tray names paired with the number of word matches. Then sort these tuples by the number of matches. 
+        # We can then use the order of the names
+        # lol Haskell says hello:
+        search_ordered_pairs = sorted([(name, num_word_matches(search_words, TRAYS[name]["info"].split())) for name in TRAYS.keys()], key=lambda x:x[1], reverse=True)
+        print(search_ordered_pairs)
+        return [TRAYS[pair[0]] for pair in search_ordered_pairs] # trays are ordered appropriately
+
+     
     
-    # Create the list of trays from our data
-    return [TRAYS[key] for key in sorted(TRAYS.keys())]
 
 
 def read_one(name):
