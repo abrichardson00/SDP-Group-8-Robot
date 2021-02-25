@@ -1,0 +1,115 @@
+swagger: "2.0"
+info:
+  description: This is the swagger file that goes with our server code
+  version: "1.0.0"
+  title: Swagger ReST Article
+consumes:
+  - application/json
+produces:
+  - application/json
+
+basePath: /api
+
+# Paths supported by the server application
+paths:
+  /images/{tray_name}:
+    get:
+      operationId: trays.read_image
+      tags:
+        - Images
+      summary: Gets the image of the specified tray
+      description: Gets the image of the specified tray
+      parameters:
+        - name: tray_name
+          in: path
+          description: name of the tray
+          type: string
+          required: True
+      responses:
+        200:
+          description: Return a png image          
+  /trays:
+    get:
+      operationId: trays.read_all
+      tags:
+        - Trays
+      summary: Read the entire list of trays
+      description: Read the list of trays
+      parameters:
+        - name: search
+          in: query
+          type: string
+          description: A search string we use to order the list of trays we return
+          required: false
+      responses:
+        200:
+          description: Successfully read people list operation
+          schema:
+            type: array
+            items:
+              properties:
+                fname:
+                  type: string
+                lname:
+                  type: string
+                timestamp:
+                  type: string
+  /trays/{name}:
+    get:
+      operationId: trays.read_one
+      tags:
+        - Trays
+      summary: Read one tray from the tray list
+      description: Read one tray from the tray list
+      parameters:
+        - name: name
+          in: path
+          description: Name of the tray to get from the list
+          type: string
+          required: True
+      responses:
+        200:
+          description: Successfully read tray from tray list operation
+          schema:
+            properties:
+              name:
+                type: string
+              info:
+                type: string
+              currently out:
+                type: string
+              capacity:
+                type: string
+              timestamp:
+                type: string
+
+    put:
+      operationId: trays.update
+      tags:
+        - Trays
+      summary: Update a tray in the tray list
+      description: Update a tray in the tray list
+      parameters:
+        - name: name
+          in: path
+          description: name of the tray to update in the list
+          type: string
+          required: True
+        - name: tray
+          in: body
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              info:
+                type: string
+              currently out:
+                type: string
+              capacity:
+                type: string
+              timestamp:
+                type: string
+      responses:
+        200:
+          description: Successfully updated tray in tray list
