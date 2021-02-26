@@ -11,7 +11,7 @@ from datetime import datetime
 from flask import render_template, send_from_directory, make_response, abort, send_file
 import connexion
 import threading
-from random import randint
+import pathlib
 
 from controller import Robot, LED
 
@@ -36,16 +36,16 @@ def get_timestamp():
 ### when run the server we load the data from the stored json files
 def load_tray_data():
     trays_dict = dict()
-    tray_path = os.getcwd() + '\\trays\\'
+    tray_path = pathlib.Path.cwd() / "trays/"
     for file in os.listdir(tray_path):
-        json_data = json.load(open(tray_path + '/' + file))
+        json_data = json.load(open(tray_path / file))
         trays_dict.update({json_data['name']:json_data})
     #print(trays_dict)
     return trays_dict
 
 # whenever TRAYS is updated, we wan't to call this function to update the appropriate file too
 def update_tray_json_file(tray_name):
-    json_file_path = os.getcwd() + '\\trays\\' + tray_name + '.json'
+    json_file_path = pathlib.Path.cwd() / "trays" / ("%s.json" % tray_name)
     data = TRAYS.get(tray_name)
     json.dump(data, open(json_file_path, 'w'))
 
@@ -62,7 +62,7 @@ def read_image(tray_name):
     """
     # Does the tray exist?
     if tray_name in TRAYS:
-        return send_file("/home/andrew/Documents/SDP/server/images/" + tray_name + ".png") # YOU'LL NEED TO CHANGE THIS!
+        return send_file(pathlib.Path.cwd() / "images" / ("%s.png" % tray_name)) 
 
     # otherwise, nope, not found
     else:
@@ -195,18 +195,14 @@ def run_app_with_args():
 
 # this runs only when server.py is run from Webots
 if __name__ == "__main__":
-
-    # create the application instance
-    app = connexion.App(__name__, specification_dir="./")
-    # read the swagger.yml file to configure the endpoints
-    app.add_api("swagger.yml")
-    
-    # start flask application in different thread
-    threading.Thread(target=run_app_with_args).start()
+    app = connexion.App(__name__, specification_dir="./")  # specification_dir is just where the swagger.yml lives
+    app.add_api("swagger.yml")                             # read the swagger.yml file to configure the endpoints
+    threading.Thread(target=run_app_with_args).start()     # start flask application in different thread so we can run other code
     
 # this runs only when Flask imports server.py from another thread
+# global Webots variables should be defined here
 if __name__ != "__main__":
     robot = Robot()
-    led = robot.getDevice("led0")
-    left_wheel = robot.getDevice("left wheel motor")
-    left_wheel.setPosition(float("inf"))
+    # led = robot.getDevice("led0")
+    # left_wheel = robot.getDevice("left wheel motor")
+    # left_wheel.setPosition(float("inf"))
