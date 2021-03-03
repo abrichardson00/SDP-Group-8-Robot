@@ -14,8 +14,6 @@ tray_regex_parser = reqparse.RequestParser()
 # tray_regex_parser.add_argument("tray", type=inputs.regex("(B|F)(L|R)[0-4]"), required=True, strict=True)
 
 CONTROL_STEP = 64
-# target_height = -1
-# target_grabber = -1
 
 class State(Enum):
     IDLE = 1
@@ -25,20 +23,55 @@ class State(Enum):
     RETRACTING_GRABBER = 5
     MOVING_TO_TOP = 6
 
+"""
+
+Retreiving:
+- IDLE
+- MOVING_UNDER_SHELF
+- EXTENDING_ARM
+- PICKING_UP_TRAY
+- RETRACTING_ARM
+- RETURNING_TO_TOP
+
+Storing:
+- IDLE
+- MOVING_TO_SHELF
+- EXTENDING_ARM(S)
+- SETTING_DOWN_TRAY
+- RETRACTING_ARMS
+- RETURNING_TO_TOP
+
+"""
+
 system_state = State.IDLE
 vertical_target = -1
 horizontal_target = -1
 left_grabber_target = -1
+right_grabber_target = -1
 
 @api.route("/retrieve/<string:tray>")
 class Retrieve(Resource):
     def get(self, tray):
 
         global system_state
+
+        if system_state != State.IDLE:
+            return {"nope": tray}
+        
         system_state = State.MOVING_TO_TRAY
+
+        if tray[1] == "L":
+            global left_grabber_target
+            left_grabber_target = 1
+        elif tray[1] == "R":
+            global right_grabber_target
+            right_grabber_target = 1
 
         global vertical_target
         vertical_target = 0.01 + int(tray[2])*0.13
+
+        global horizontal_target
+        horizontal_target = (0.0 if tray[0] == "B" else -0.21)
 
         return {"yay": tray}
 
@@ -55,8 +88,8 @@ class UpDownResource(Resource):
 class GrabberResource(Resource):
     def get(self, value):
         # print("parsed %s" % float(value))
-        global target_grabber
-        target_grabber = float(value)
+        global right_grabber_target
+        right_grabber_target = float(value)
         return {"hello": "world"}
 
 def in_range(position, target):
@@ -71,10 +104,20 @@ if __name__ == "__main__":
     vertical_motor_pos_sensor = theostore.getDevice("VertPos")
     vertical_motor_pos_sensor.enable(CONTROL_STEP)
     
+    horizontal_motor = theostore.getDevice("horizontal motor")
+
+    horizontal_motor_pos_sensor = theostore.getDevice("HoriPos")
+    horizontal_motor_pos_sensor.enable(CONTROL_STEP)
+
     left_grabber_motor = theostore.getDevice("left grabber motor")
     
     left_grabber_motor_pos_sensor = theostore.getDevice("left_grabber_sensor")
     left_grabber_motor_pos_sensor.enable(CONTROL_STEP)
+
+    right_grabber_motor = theostore.getDevice("right grabber motor")
+
+    right_grabber_motor_pos_sensor = theostore.getDevice("grabberPosSensor")
+    right_grabber_motor_pos_sensor.enable(CONTROL_STEP)
 
     print("Giving Flask a second to boot up...")
 
@@ -89,17 +132,30 @@ if __name__ == "__main__":
         sleep(0.01)
 
     while theostore.step(CONTROL_STEP) != -1:
+
         if system_state == State.MOVING_TO_TRAY:
             vertical_motor.setPosition(vertical_target)
-            current_pos = vertical_motor_pos_sensor.getValue()
-            if in_range(current_pos, vertical_target):
+            current_vertical_pos = vertical_motor_pos_sensor.getValue()
+
+            # once the platform has cleared the hole in the top
+            if current_vertical_pos < 0.5:
+                    horizontal_motor.setPosition(horizontal_target)
+            current_horizontal_pos = horizontal_motor_pos_sensor.getValue()
+
+            if in_range(current_vertical_pos, vertical_target) and in_range(current_horizontal_pos, horizontal_target):
                 system_state = State.EXTENDING_GRABBER
         
         elif system_state == State.EXTENDING_GRABBER:
-            left_grabber_motor.setPosition(0.22)
-            current_pos = left_grabber_motor_pos_sensor.getValue()
-            if in_range(current_pos, 0.22):
-                system_state = State.PICKING_UP_TRAY
+            if left_grabber_target != -1:
+                left_grabber_motor.setPosition(0.22)
+                current_pos = left_grabber_motor_pos_sensor.getValue()
+                if in_range(current_pos, 0.22):
+                    system_state = State.PICKING_UP_TRAY
+            elif right_grabber_target != -1:
+                right_grabber_motor.setPosition(-0.22)
+                current_pos = right_grabber_motor_pos_sensor.getValue()
+                if in_range(current_pos, -0.22):
+                    system_state = State.PICKING_UP_TRAY
 
         elif system_state == State.PICKING_UP_TRAY:
             vertical_motor.setPosition(vertical_target + 0.01)
@@ -108,18 +164,31 @@ if __name__ == "__main__":
                 system_state = State.RETRACTING_GRABBER
         
         elif system_state == State.RETRACTING_GRABBER:
-            left_grabber_motor.setPosition(0.0)
-            current_pos = left_grabber_motor_pos_sensor.getValue()
-            if in_range(current_pos, 0.0):
-                system_state = State.MOVING_TO_TOP
+            if left_grabber_target != -1:
+                left_grabber_motor.setPosition(0.0)
+                current_pos = left_grabber_motor_pos_sensor.getValue()
+                if in_range(current_pos, 0.0):
+                    system_state = State.MOVING_TO_TOP
+            elif right_grabber_target != -1:
+                right_grabber_motor.setPosition(0.0)
+                current_pos = right_grabber_motor_pos_sensor.getValue()
+                if in_range(current_pos, 0.0):
+                    system_state = State.MOVING_TO_TOP
         
         elif system_state == State.MOVING_TO_TOP:
             vertical_motor.setPosition(0.65)
-            current_pos = vertical_motor_pos_sensor.getValue()
-            if in_range(current_pos, 0.65):
-                system_state = State.IDLE
-        
-        
+            horizontal_motor.setPosition(0.0)
+            current_vertical_pos = vertical_motor_pos_sensor.getValue()
+            current_horizontal_pos = horizontal_motor_pos_sensor.getValue()
 
-            
-    
+            if not in_range(current_horizontal_pos, 0) and current_vertical_pos > 0.50:
+                vertical_motor.setVelocity(0)
+            else:
+                vertical_motor.setVelocity(0.05)
+
+            if in_range(current_vertical_pos, 0.65):
+                system_state = State.IDLE
+                vertical_target = -1
+                horizontal_target = -1
+                left_grabber_target = -1
+                right_grabber_target = -1
