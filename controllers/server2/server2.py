@@ -15,6 +15,13 @@ tray_regex_parser = reqparse.RequestParser()
 
 CONTROL_STEP = 64
 
+MAX_HEIGHT = 0.65
+FB_MAX_EXTENT = 0.22
+HEIGHT_MOD = 0.13
+SHELF_TOP_CLEARANCE = 0.50
+#these values were hard-coded and used repeatedly in the script. 
+#Whilst it's fine for some of them, this is bad practice. -Blair
+
 class State(Enum):
     IDLE = 1
     MOVING_TO_TRAY = 2
@@ -68,7 +75,7 @@ class Retrieve(Resource):
             right_grabber_target = 1
 
         global vertical_target
-        vertical_target = 0.01 + int(tray[2])*0.13
+        vertical_target = 0.01 + int(tray[2])*HEIGHT_MOD
 
         global horizontal_target
         horizontal_target = (0.0 if tray[0] == "B" else -0.21)
@@ -138,7 +145,7 @@ if __name__ == "__main__":
             current_vertical_pos = vertical_motor_pos_sensor.getValue()
 
             # once the platform has cleared the hole in the top
-            if current_vertical_pos < 0.5:
+            if current_vertical_pos < SHELF_TOP_CLEARANCE:
                     horizontal_motor.setPosition(horizontal_target)
             current_horizontal_pos = horizontal_motor_pos_sensor.getValue()
 
@@ -147,14 +154,14 @@ if __name__ == "__main__":
         
         elif system_state == State.EXTENDING_GRABBER:
             if left_grabber_target != -1:
-                left_grabber_motor.setPosition(0.22)
+                left_grabber_motor.setPosition(FB_MAX_EXTENT)
                 current_pos = left_grabber_motor_pos_sensor.getValue()
-                if in_range(current_pos, 0.22):
+                if in_range(current_pos, FB_MAX_EXTENT):
                     system_state = State.PICKING_UP_TRAY
             elif right_grabber_target != -1:
-                right_grabber_motor.setPosition(-0.22)
+                right_grabber_motor.setPosition(-FB_MAX_EXTENT)
                 current_pos = right_grabber_motor_pos_sensor.getValue()
-                if in_range(current_pos, -0.22):
+                if in_range(current_pos, -FB_MAX_EXTENT):
                     system_state = State.PICKING_UP_TRAY
 
         elif system_state == State.PICKING_UP_TRAY:
@@ -176,17 +183,17 @@ if __name__ == "__main__":
                     system_state = State.MOVING_TO_TOP
         
         elif system_state == State.MOVING_TO_TOP:
-            vertical_motor.setPosition(0.65)
+            vertical_motor.setPosition(MAX_HEIGHT)
             horizontal_motor.setPosition(0.0)
             current_vertical_pos = vertical_motor_pos_sensor.getValue()
             current_horizontal_pos = horizontal_motor_pos_sensor.getValue()
 
-            if not in_range(current_horizontal_pos, 0) and current_vertical_pos > 0.50:
+            if not in_range(current_horizontal_pos, 0) and current_vertical_pos > SHELF_TOP_CLEARANCE:
                 vertical_motor.setVelocity(0)
             else:
                 vertical_motor.setVelocity(0.05)
 
-            if in_range(current_vertical_pos, 0.65):
+            if in_range(current_vertical_pos, MAX_HEIGHT):
                 system_state = State.IDLE
                 vertical_target = -1
                 horizontal_target = -1
