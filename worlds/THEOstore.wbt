@@ -1,0 +1,640 @@
+#VRML_SIM R2021a utf8
+WorldInfo {
+  coordinateSystem "NUE"
+}
+Viewpoint {
+  orientation -0.19946153612140607 -0.9674407484450487 -0.15579953098829544 1.3966547675842471
+  position -2.3735698968982737 1.3465464505583364 0.6810097029380214
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 1 3
+  wallThickness 1e-09
+  wallHeight 1e-05
+}
+DEF SHELVES Group {
+  children [
+    RoCKInShelf {
+      translation 0.31 0.01 0
+    }
+    RoCKInShelf {
+      translation 0.31 0.01 0.63
+      name "RoCKIn shelf(1)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.01 -0.65
+      name "RoCKIn shelf(2)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.53 0
+      name "RoCKIn shelf(3)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.53 0.63
+      name "RoCKIn shelf(4)"
+    }
+    RoCKInShelf {
+      translation 0.31 0.52 -0.65
+      name "RoCKIn shelf(5)"
+    }
+  ]
+}
+Robot {
+  translation 0.040322 0.0306035 -0.000307
+  children [
+    DEF HORIZ_GANTRY Group {
+      children [
+        DEF HORIZ_MOVER Transform {
+          translation 0 -0.04 0.01
+          children [
+            DEF VERTCAL_GANTRY_ROD_4 Solid {
+              translation -0.2 0.5 -0.98
+              children [
+                DEF GANTRY_ROD Shape {
+                  appearance DEF VERTICAL_GANTRY_APPEARANCE Appearance {
+                    material Material {
+                      diffuseColor 0.3 0.3 0.9
+                      emissiveColor 0 0 1
+                    }
+                  }
+                  geometry DEF VERTICAL_GANTRY Box {
+                    size 0.05 1.2 0.05
+                  }
+                }
+              ]
+              name "VERTICAL_GANTRY_ROD_1(3)"
+              boundingObject USE VERTICAL_GANTRY
+              physics Physics {
+              }
+            }
+            DEF VERTCAL_GANTRY_ROD_3 Solid {
+              translation 0.03 0.5 -0.98
+              children [
+                DEF GANTRY_ROD Shape {
+                  appearance DEF VERTICAL_GANTRY_APPEARANCE Appearance {
+                    material Material {
+                      diffuseColor 0.3 0.3 0.9
+                      emissiveColor 0 0 1
+                    }
+                  }
+                  geometry DEF VERTICAL_GANTRY Box {
+                    size 0.05 1.2 0.05
+                  }
+                }
+              ]
+              name "VERTICAL_GANTRY_ROD_1(2)"
+              boundingObject USE VERTICAL_GANTRY
+              physics Physics {
+              }
+            }
+            DEF VERTCAL_GANTRY_ROD_2 Solid {
+              translation -0.2 0.5 0.96
+              children [
+                DEF GANTRY_ROD Shape {
+                  appearance DEF VERTICAL_GANTRY_APPEARANCE Appearance {
+                    material Material {
+                      diffuseColor 0.3 0.3 0.9
+                      emissiveColor 0 0 1
+                    }
+                  }
+                  geometry DEF VERTICAL_GANTRY Box {
+                    size 0.05 1.2 0.05
+                  }
+                }
+              ]
+              name "VERTICAL_GANTRY_ROD_1(1)"
+              boundingObject USE VERTICAL_GANTRY
+              physics Physics {
+              }
+            }
+            DEF HORIZMOVER Shape {
+              appearance Appearance {
+                material Material {
+                  diffuseColor 0.3 0.3 0.8
+                  emissiveColor 0.3 0.3 0.8
+                }
+              }
+              geometry Box {
+                size 0.2 0.04 0.5
+              }
+            }
+            DEF VERTCAL_GANTRY_ROD Solid {
+              translation 0.03 0.5 0.96
+              children [
+                DEF GANTRY_ROD Shape {
+                  appearance DEF VERTICAL_GANTRY_APPEARANCE Appearance {
+                    material Material {
+                      diffuseColor 0.3 0.3 0.9
+                      emissiveColor 0 0 1
+                    }
+                  }
+                  geometry DEF VERTICAL_GANTRY Box {
+                    size 0.05 1.2 0.05
+                  }
+                }
+              ]
+              name "VERTICAL_GANTRY_ROD_1"
+              boundingObject USE VERTICAL_GANTRY
+              physics Physics {
+              }
+            }
+          ]
+        }
+        DEF VERT_GANTRY_REST Solid {
+          translation -0.09 -0.01 -0.01
+          children [
+            SliderJoint {
+              jointParameters JointParameters {
+                axis 0 1 0
+                maxStop 1
+                staticFriction 10
+              }
+              device [
+                PositionSensor {
+                  name "VertPos"
+                }
+                Brake {
+                  name "vertical brake"
+                }
+                LinearMotor {
+                  name "vertical linear motor"
+                  acceleration 0.15
+                  maxVelocity 0.4
+                  maxPosition 0.9
+                  maxForce 1
+                }
+              ]
+              endPoint Solid {
+                translation 0 0.15 0
+                children [
+                  Group {
+                    children [
+                      SliderJoint {
+                        jointParameters JointParameters {
+                        }
+                        device [
+                          PositionSensor {
+                            name "HoriPos"
+                          }
+                          Brake {
+                            name "horizontal brake"
+                          }
+                          LinearMotor {
+                            name "horizontal linear motor"
+                            acceleration 0.06
+                            maxVelocity 1
+                            minPosition -0.98
+                            maxPosition 0.6
+                            maxForce 1
+                          }
+                        ]
+                        endPoint DEF HORIZ_MOVER Solid {
+                          children [
+                            SliderJoint {
+                              jointParameters JointParameters {
+                                axis 1 0 0
+                              }
+                              device [
+                                PositionSensor {
+                                }
+                                LinearMotor {
+                                  name "FrontBackSelector"
+                                  minPosition -0.05
+                                  maxPosition 0.05
+                                }
+                              ]
+                              endPoint Solid {
+                                translation -0.01 0 0.22
+                                children [
+                                  Shape {
+                                    appearance Appearance {
+                                      material Material {
+                                        diffuseColor 0.1 0.8 0.1
+                                        emissiveColor 0 0.6 0
+                                      }
+                                    }
+                                    geometry DEF FRONTBACK_BOX Box {
+                                      size 0.3 0.05 0.05
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                            Shape {
+                              appearance Appearance {
+                                material Material {
+                                  ambientIntensity 0.5
+                                  diffuseColor 0.8 0.3 0.8
+                                  emissiveColor 0.4 0 0.4
+                                }
+                              }
+                              geometry Box {
+                                size 0.2 0.04 0.5
+                              }
+                            }
+                          ]
+                          name "HORIZ_MOVER"
+                        }
+                      }
+                      DEF HORIZ_GANTRY_ROD_2 Solid {
+                        translation 0.11 0 0.01
+                        children [
+                          Shape {
+                            appearance Appearance {
+                              material Material {
+                                diffuseColor 0.5 0.2 0.5
+                                emissiveColor 0.7 0 0.7
+                              }
+                            }
+                            geometry Box {
+                              size 0.02 0.02 2
+                            }
+                          }
+                        ]
+                        name "solid(1)"
+                      }
+                      DEF HORIZ_GANTRY_ROD Solid {
+                        translation -0.11 0 0.01
+                        children [
+                          Shape {
+                            appearance Appearance {
+                              material Material {
+                                diffuseColor 0.5 0.2 0.5
+                                emissiveColor 0.7 0 0.7
+                              }
+                            }
+                            geometry Box {
+                              size 0.02 0.02 2
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            Shape {
+              geometry Box {
+                size 0.3 0.01 1.9
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+  controller "HORIZONTAL_CONTROLLER"
+}
+DEF GANTRY Robot {
+  translation -1.47 0.98 -1.99
+  children [
+    DEF PILLARS_GROUP Group {
+      children [
+        DEF BRIDGE_TRANS Transform {
+          translation -0.07 0.12 0
+          children [
+            Shape {
+              appearance DEF YELLOW_APPEARANCE PBRAppearance {
+                baseColor 1 1 0
+                roughness 1
+                metalness 0
+              }
+              geometry Box {
+                size 2 0.12 0.2
+              }
+            }
+          ]
+        }
+        DEF PILLAR1_TRANS Transform {
+          translation 0.5 -0.44 -0.4
+          children [
+            DEF PILLAR_SHAPE Shape {
+              appearance USE YELLOW_APPEARANCE
+              geometry Box {
+                size 0.1 1 0.1
+              }
+            }
+          ]
+        }
+        DEF PILLAR2_TRANS Transform {
+          translation -0.5 -0.44 -0.4
+          children [
+            USE PILLAR_SHAPE
+          ]
+        }
+        DEF PILLAR3_TRANS Transform {
+          translation 0.5 -0.44 0.4
+          children [
+            USE PILLAR_SHAPE
+          ]
+        }
+        DEF PILLAR4_TRANS Transform {
+          translation -0.5 -0.44 0.4
+          children [
+            USE PILLAR_SHAPE
+          ]
+        }
+        DEF TRANSVERSE1 Transform {
+          translation -0.5 0.11 0
+          children [
+            DEF TRANSVERSE_SHAPE Shape {
+              appearance USE YELLOW_APPEARANCE
+              geometry Box {
+                size 0.1 0.1 0.9
+              }
+            }
+          ]
+        }
+        DEF TRANSVERSE2 Transform {
+          translation 0.5 0.11 0
+          children [
+            USE TRANSVERSE_SHAPE
+          ]
+        }
+      ]
+    }
+    DEF WHEEL1_HINGE_JOINT HingeJoint {
+      jointParameters HingeJointParameters {
+        anchor 0.5 -0.9 -0.4
+      }
+      device [
+        RotationalMotor {
+          name "wheel1_motor"
+        }
+      ]
+      endPoint Solid {
+        translation 0.5 -0.9 -0.4
+        rotation 1 0 0 0
+        children [
+          DEF WHEEL1_TRANS Transform {
+            rotation 0 0 1 1.5708
+            children [
+              DEF WHEEL_SHAPE Shape {
+                appearance DEF WHEEL_APPEARANCE PBRAppearance {
+                  baseColor 0 0 0
+                  roughness 1
+                  metalness 0
+                }
+                geometry Cylinder {
+                  height 0.04
+                  radius 0.08
+                }
+              }
+            ]
+          }
+        ]
+        name "wheel1"
+        boundingObject USE WHEEL1_TRANS
+        physics DEF WHEEL_PHYSICS Physics {
+        }
+      }
+    }
+    DEF WHEEL2_HINGE_JOINT HingeJoint {
+      jointParameters HingeJointParameters {
+        anchor -0.5 -0.9 -0.4
+      }
+      device [
+        RotationalMotor {
+          name "wheel2_motor"
+        }
+      ]
+      endPoint Solid {
+        translation -0.5 -0.9 -0.4
+        rotation 1 0 0 0
+        children [
+          DEF WHEEL2_TRANS Transform {
+            rotation 0 0 1 1.5708
+            children [
+              USE WHEEL_SHAPE
+            ]
+          }
+        ]
+        name "wheel2"
+        boundingObject USE WHEEL2_TRANS
+        physics USE WHEEL_PHYSICS
+      }
+    }
+    DEF WHEEL3_HINGE_JOINT HingeJoint {
+      jointParameters HingeJointParameters {
+        anchor 0.5 -0.9 0.4
+      }
+      device [
+        RotationalMotor {
+          name "wheel3_motor"
+        }
+      ]
+      endPoint Solid {
+        translation 0.5 -0.9 0.4
+        rotation 1 0 0 0
+        children [
+          DEF WHEEL3_TRANS Transform {
+            rotation 0 0 1 1.5708
+            children [
+              USE WHEEL_SHAPE
+            ]
+          }
+        ]
+        name "wheel3"
+        boundingObject USE WHEEL3_TRANS
+        physics USE WHEEL_PHYSICS
+      }
+    }
+    DEF WHEEL4_HINGE_JOINT HingeJoint {
+      jointParameters HingeJointParameters {
+        anchor -0.5 -0.9 0.4
+      }
+      device [
+        RotationalMotor {
+          name "wheel4_motor"
+        }
+      ]
+      endPoint Solid {
+        translation -0.5 -0.9 0.4
+        rotation 1 0 0 0
+        children [
+          DEF WHEEL4_TRANS Transform {
+            rotation 0 0 1 1.5708
+            children [
+              USE WHEEL_SHAPE
+            ]
+          }
+        ]
+        name "wheel4"
+        boundingObject USE WHEEL4_TRANS
+        physics USE WHEEL_PHYSICS
+      }
+    }
+    DEF BRIDGE_SLIDER_JOINT SliderJoint {
+      jointParameters JointParameters {
+        position 5.55539219717352e-09
+        axis 1 0 0
+        minStop -0.9
+        maxStop 0.9
+      }
+      device [
+        LinearMotor {
+          name "bridge_motor"
+          maxVelocity 1
+          minPosition -0.9
+          maxPosition 0.9
+          maxForce 100
+        }
+      ]
+      endPoint Solid {
+        translation -0.0599999944446078 -0.22 2.20392e-07
+        rotation 0 1 0 1.5708
+        children [
+          DEF TURRET_HINGE_JOINT HingeJoint {
+            jointParameters HingeJointParameters {
+              position 2.0488366991175392e-05
+              axis 0 1 0
+              anchor 0 0.11 0
+            }
+            device [
+              RotationalMotor {
+                name "turret_motor"
+                maxVelocity 3.14
+                maxTorque 100
+              }
+            ]
+            endPoint Solid {
+              translation -1.4496940193382193e-06 0.11 -0.05999999998288975
+              rotation 0 0.9999999999999999 0 1.570820488366949
+              children [
+                DEF TURRET_SHAPE Shape {
+                  appearance USE WHEEL_APPEARANCE
+                  geometry Cylinder {
+                    height 0.16
+                    radius 0.08
+                  }
+                }
+                DEF LIFT_SLIDER_JOINT SliderJoint {
+                  jointParameters JointParameters {
+                    position 0.00036298791298838005
+                    axis 0 -1 0
+                  }
+                  device [
+                    LinearMotor {
+                      name "lift_motor"
+                      maxVelocity 1
+                      maxPosition 0.73
+                      maxForce 400
+                    }
+                  ]
+                  endPoint Solid {
+                    translation -0.11 0.3596370120870116 0
+                    rotation 1 0 0 1.5708
+                    children [
+                      DEF PISTON_GROUP Group {
+                        children [
+                          Transform {
+                            translation 0 0 0.5
+                            children [
+                              Shape {
+                                appearance DEF RAIL_APPEARANCE PBRAppearance {
+                                  roughness 1
+                                  metalness 0
+                                }
+                                geometry Box {
+                                  size 0.2 0.4 0.04
+                                }
+                              }
+                            ]
+                          }
+                          Transform {
+                            rotation 1 0 0 1.5708
+                            children [
+                              Shape {
+                                appearance USE RAIL_APPEARANCE
+                                geometry Cylinder {
+                                  height 1
+                                  radius 0.05
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                      DEF GRIPPER_SLIDER_JOINT1 SliderJoint {
+                        jointParameters JointParameters {
+                          position -1.128233435326434e-09
+                          axis 0 1 0
+                        }
+                        device [
+                          LinearMotor {
+                            name "grip_motor1"
+                            minPosition -1.128233435326434e-09
+                            maxPosition 0.18
+                            maxForce 200
+                          }
+                        ]
+                        endPoint Solid {
+                          translation -0.01 -0.19000000112823343 0.6
+                          rotation 1 0 0 -1.5708
+                          children [
+                            DEF GRIPPER_SHAPE Shape {
+                              appearance USE RAIL_APPEARANCE
+                              geometry Box {
+                                size 0.2 0.16 0.02
+                              }
+                            }
+                          ]
+                          name "grip1"
+                          boundingObject USE GRIPPER_SHAPE
+                          physics Physics {
+                          }
+                        }
+                      }
+                      DEF GRIPPER_SLIDER_JOINT2 SliderJoint {
+                        jointParameters JointParameters {
+                          position -1.0058352418216564e-09
+                          axis 0 -1 0
+                        }
+                        device [
+                          LinearMotor {
+                            name "grip_motor2"
+                            minPosition -1.0058352418216564e-09
+                            maxPosition 0.18
+                            maxForce 200
+                          }
+                        ]
+                        endPoint Solid {
+                          translation 0 0.19000000100583525 0.6
+                          rotation 1 0 0 1.5708
+                          children [
+                            USE GRIPPER_SHAPE
+                          ]
+                          name "grip2"
+                          boundingObject USE GRIPPER_SHAPE
+                          physics Physics {
+                          }
+                        }
+                      }
+                    ]
+                    boundingObject USE PISTON_GROUP
+                    physics Physics {
+                    }
+                  }
+                }
+              ]
+              boundingObject USE TURRET_SHAPE
+              physics Physics {
+              }
+            }
+          }
+        ]
+        boundingObject Box {
+          size 0.1 0.1 0.1
+        }
+        physics Physics {
+        }
+      }
+    }
+  ]
+  name "robot(1)"
+  controller ""
+}
