@@ -3,6 +3,7 @@ import sys
 import re
 import collections
 import subprocess
+from datetime import datetime
 from controller import Robot
 
 
@@ -10,6 +11,7 @@ from controller import Robot
 
 # This is in ms and must be a multiple of the simulation timestep
 CONTROL_STEP = 64 
+CAMERA_SAMPLE_RATE = 512
 
 # TODO: use v_motor.getMaxPosition instead
 MAX_VERTICAL = 0.65
@@ -95,11 +97,13 @@ rgrab_motor = Motor(
     theostore.getDevice("right grabber motor"),
     theostore.getDevice("grabberPosSensor"))
 
+camera = theostore.getDevice("camera")
+
 v_motor.enable()
 h_motor.enable()
 lgrab_motor.enable()
 rgrab_motor.enable()
-
+camera.enable(CAMERA_SAMPLE_RATE)
 
 ## INSTRUCTION QUEUE FUNCTIONS #################################################
 
@@ -219,13 +223,13 @@ def main_webots_loop():
         # Try to read from connection
         # Throws a BlockingIOError if there is nothing to read
         try:
-            received_message = connection.recv(7).decode("utf-8")
+            received_message = connection.recv(32).decode("utf-8")
         except BlockingIOError:
             received_message = ""
 
         # Try to match message with regular expression
         match = re.fullmatch(
-            "(GET|PUT) (F|B)(L|R)([0-4])", 
+            "(GET|PUT) ((F|B)(L|R)([0-4]))", 
             received_message)
 
         if match:
@@ -233,13 +237,20 @@ def main_webots_loop():
 
             # match.group returns the bracketed terms in the regex
             m = match.group
-            command, depth, side, level = m(1), m(2), m(3), int(m(4))
+            command, name = m(1), m(2)
+            depth, side, level = m(3), m(4), int(m(5))
 
             # Enqueue the appropriate instructions to the queue
             if command == "GET":
                 instructions = retrieve(depth, side, level)
+            
             elif command == "PUT":
                 instructions = store(depth, side, level)
+                
+                filename = name + ".jpg"
+                camera.saveImage("images/" + filename, 90)
+                connection.send(bytes(filename, "utf-8"))
+            
             queue.enqueue(instructions)
         elif received_message != "":
             print("Invalid command '%s'." % received_message)
