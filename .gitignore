@@ -3,3 +3,5 @@ controllers/server/__pycache__/server.cpython-39.pyc
 .vscode/.ropeproject/objectdb
 controllers/server/__pycache__/server.cpython-39.pyc
 __pycache__/
+.vscode/settings.json
+server/__pycache__/
