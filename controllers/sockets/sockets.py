@@ -2,10 +2,11 @@ import socket
 import sys
 import re
 import collections
+import subprocess
 from controller import Robot
 
 
-## WEBOTS CONSTANTS ####################################################
+## WEBOTS CONSTANTS ############################################################
 
 # This is in ms and must be a multiple of the simulation timestep
 CONTROL_STEP = 64 
@@ -38,7 +39,7 @@ MIN_GRABBER = -0.22
 SHELF_ROOF_CLEARANCE = 0.50
 
 
-## HELPER CLASSES ######################################################
+## HELPER CLASSES ##############################################################
 
 class Motor:
     """Helper for grouping motors with their position sensors."""
@@ -74,7 +75,7 @@ class Queue(collections.deque):
         return len(self) == 0
 
 
-## INIT WEBOTS DEVICES #################################################
+## INIT WEBOTS DEVICES #########################################################
 
 theostore = Robot()
 
@@ -100,7 +101,7 @@ lgrab_motor.enable()
 rgrab_motor.enable()
 
 
-## INSTRUCTION QUEUE FUNCTIONS #########################################
+## INSTRUCTION QUEUE FUNCTIONS #################################################
 
 """
 Instructions are stored as dictionaries.
@@ -109,9 +110,9 @@ For example:
 
     instuction = {v_motor: 0.30, h_motor: 0.00}
 
-Instructions are queued up and then dequeued when the simulation has
-followed them (when each Motor's position sensor value matches its
-target position in the instruction).
+Instructions are queued up and then dequeued when the simulation has followed
+them (when each Motor's position sensor value matches its target position in
+the instruction).
 
 """
 
@@ -203,17 +204,16 @@ def store(depth, side, level):
     return instructions
 
 # Steps used in both retrieval AND storage of trays
-move_below_roof = {
-    v_motor: SHELF_ROOF_CLEARANCE,
-    h_motor: MIN_HORIZONTAL
-}
+move_below_roof = {v_motor: SHELF_ROOF_CLEARANCE, h_motor: MIN_HORIZONTAL}
 ascend_to_roof = {v_motor: MAX_VERTICAL}
 retract_grabbers = move_grabbers(0, 0)
 
 
-## MAIN PROGRAM ########################################################
+## MAIN PROGRAM ################################################################
 
 def main_webots_loop():
+    queue = Queue()
+
     while theostore.step(CONTROL_STEP) != -1:
 
         # Try to read from connection
@@ -260,7 +260,6 @@ def main_webots_loop():
             if target_positions_met:
                 queue.dequeue()
 
-
 # The socket that we listen for commands on
 server_socket = socket.create_server(("127.0.0.1", 5000))
 server_socket.listen()
@@ -270,14 +269,17 @@ theostore.step(CONTROL_STEP)  # Needed to display text
 
 # This will block until we establish a connection
 connection, address = server_socket.accept()
-print("Established connection!")
 
-# Disable blocking for the incoming connection so Webots doesn't hang
-# while we wait for commands being sent
+# Disable blocking for the incoming connection so Webots doesn't hang while we
+# wait for commands to arrive
 connection.setblocking(False)
 
-# Create instruction queue
-queue = Queue()
+print("Established connection!")
+print("Starting webserver and simulation...")
+theostore.step(CONTROL_STEP)
+
+command = [sys.executable, "-m", "http.server", "80", "-d", "images/"]
+image_server = subprocess.Popen(command)
 
 # Start main loop...
 try:
@@ -287,3 +289,4 @@ except KeyboardInterrupt:
 finally:
     # Executes whether or not an exception was caught
     server_socket.close()
+    image_server.kill()
