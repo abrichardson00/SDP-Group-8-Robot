@@ -7,38 +7,7 @@ from datetime import datetime
 from controller import Robot
 
 
-## WEBOTS CONSTANTS ############################################################
 
-# This is in ms and must be a multiple of the simulation timestep
-CONTROL_STEP = 64 
-CAMERA_SAMPLE_RATE = 512
-
-# TODO: use v_motor.getMaxPosition instead
-MAX_VERTICAL = 0.65
-MIN_VERTICAL = 0.01
-
-# Platform lines up with bottom shelf at this height
-BOTTOM_SHELF = 0.0228  
-
-# 13cm gap between each shelf
-SHELF_SPACING = 0.130  
-
-# Distance the platform lowers by to reach under each tray
-BELOW_TRAY_OFFSET = -0.0130
-
-# Used to slightly offset the platform and the shelf
-# Increase the platform height by this when inserting
-# Decrease the platform height by this when removing
-NUDGE = 0.001
-
-MAX_HORIZONTAL = -0.21
-MIN_HORIZONTAL = 0.00
-
-MAX_GRABBER = 0.22
-MIN_GRABBER = -0.22
-
-# Height at which the platform can safely move horizontally
-SHELF_ROOF_CLEARANCE = 0.50
 
 
 ## HELPER CLASSES ##############################################################
@@ -57,6 +26,12 @@ class Motor:
     
     def set_position(self, target):
         self.motor.setPosition(target)
+        
+    def getMaxPosition(self):
+        return self.motor.getMaxPosition()
+        
+    def getMinPosition(self):
+        return self.motor.getMinPosition()
 
 
 class Queue(collections.deque):
@@ -99,11 +74,49 @@ rgrab_motor = Motor(
 
 camera = theostore.getDevice("camera")
 
+weightSense = theostore.getDevice("Weight Sensor")
+
+
+## WEBOTS CONSTANTS ############################################################
+
+# This is in ms and must be a multiple of the simulation timestep
+CONTROL_STEP = 64 
+CAMERA_SAMPLE_RATE = 512
+
+# TODO: use v_motor.getMaxPosition instead
+MAX_VERTICAL = v_motor.getMaxPosition()
+MIN_VERTICAL = v_motor.getMinPosition() #bit weird because of nudge + offset
+
+# Platform lines up with bottom shelf at this height
+BOTTOM_SHELF = 0.0228  
+
+# 13cm gap between each shelf
+SHELF_SPACING = 0.130  
+
+# Distance the platform lowers by to reach under each tray
+BELOW_TRAY_OFFSET = -0.0130
+
+# Used to slightly offset the platform and the shelf
+# Increase the platform height by this when inserting
+# Decrease the platform height by this when removing
+NUDGE = 0.001
+
+MAX_HORIZONTAL = h_motor.getMinPosition() #just how the orientation is.
+MIN_HORIZONTAL = h_motor.getMaxPosition()
+
+MAX_GRABBER = lgrab_motor.getMinPosition()
+MIN_GRABBER = lgrab_motor.getMaxPosition()
+
+# Height at which the platform can safely move horizontally
+SHELF_ROOF_CLEARANCE = 0.50
+
+
 v_motor.enable()
 h_motor.enable()
 lgrab_motor.enable()
 rgrab_motor.enable()
 camera.enable(CAMERA_SAMPLE_RATE)
+weightSense.enable(CAMERA_SAMPLE_RATE)
 
 ## INSTRUCTION QUEUE FUNCTIONS #################################################
 
@@ -219,7 +232,7 @@ def main_webots_loop():
     queue = Queue()
 
     while theostore.step(CONTROL_STEP) != -1:
-
+        print(weightSense.getValue())
         # Try to read from connection
         # Throws a BlockingIOError if there is nothing to read
         try:
