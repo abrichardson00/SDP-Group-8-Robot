@@ -104,8 +104,8 @@ NUDGE = 0.001
 MAX_HORIZONTAL = h_motor.getMinPosition() #just how the orientation is.
 MIN_HORIZONTAL = h_motor.getMaxPosition()
 
-MAX_GRABBER = lgrab_motor.getMinPosition()
-MIN_GRABBER = lgrab_motor.getMaxPosition()
+MIN_GRABBER = lgrab_motor.getMinPosition()
+MAX_GRABBER = lgrab_motor.getMaxPosition() 
 
 # Height at which the platform can safely move horizontally
 SHELF_ROOF_CLEARANCE = 0.50
@@ -262,13 +262,18 @@ def main_webots_loop():
             elif command == "PUT":
                 instructions = store(depth, side, level)
                 
-                filename = name + ".jpg"
-                camera.saveImage("images/" + filename, 90)
-                connection.send(bytes(filename, "utf-8"))
+                if(queue.empty()):
+                    filename = name + ".jpg"
+                    camera.saveImage("images/" + filename, 90)
+                    connection.send(bytes(filename, "utf-8"))
+                else:
+                    connection.send(bytes("ACK", "utf-8"))
+                #this should solve the problem of the system taking arbitary photos when things are queued.
             
             queue.enqueue(instructions)
         elif received_message != "":
             print("Invalid command '%s'." % received_message)
+            connection.send(bytes("BAD", "utf-8"))
         
         # If we haven't exhausted the instruction queue
         if not queue.empty():
