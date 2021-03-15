@@ -3,11 +3,8 @@ import sys
 import re
 import collections
 import subprocess
-from datetime import datetime
+import select
 from controller import Robot
-
-
-
 
 
 ## HELPER CLASSES ##############################################################
@@ -120,6 +117,7 @@ weightSense.enable(CAMERA_SAMPLE_RATE)
 
 ## INSTRUCTION QUEUE FUNCTIONS #################################################
 
+
 """
 Instructions are stored as dictionaries.
 Each dictionary entry has a Motor as a key and target pos as a value.
@@ -135,7 +133,7 @@ the instruction).
 
 def in_range(position, target):
     """Checks whether two numbers are very close."""
-    return target - 0.0001 < position < target + 0.0001
+    return target - 0.005 < position < target + 0.005
 
 
 def move_to_tray(level, depth, offset):
@@ -220,6 +218,7 @@ def store(depth, side, level):
     ]
     return instructions
 
+
 # Steps used in both retrieval AND storage of trays
 move_below_roof = {v_motor: SHELF_ROOF_CLEARANCE, h_motor: MIN_HORIZONTAL}
 ascend_to_roof = {v_motor: MAX_VERTICAL}
@@ -228,18 +227,54 @@ retract_grabbers = move_grabbers(0, 0)
 
 ## MAIN PROGRAM ################################################################
 
+
+command = [sys.executable, "-m", "http.server", "80", "-d", "images/"]
+image_server = subprocess.Popen(command)
+
+print("Image server started")
+
+print("Listening on socket")
+server_socket = socket.create_server(("127.0.0.1", 5000), backlog=1)
+server_socket.setblocking(False)
+client_socket = None
+
+
 def main_webots_loop():
     queue = Queue()
 
+    global server_socket
+    global client_socket
+
     while theostore.step(CONTROL_STEP) != -1:
-        print(weightSense.getValue())
-        # Try to read from connection
-        # Throws a BlockingIOError if there is nothing to read
-        try:
-            received_message = connection.recv(32).decode("utf-8")
-            received_message = received_message.upper()
-        except BlockingIOError:
-            received_message = ""
+
+        received_message = ""
+
+        readable_sockets, _, _ = select.select(
+            [server_socket] + ([client_socket] if client_socket else []), 
+            [], 
+            [], 
+            0)
+
+        for socket in readable_sockets:
+
+            # If someone is trying to establish a connection
+            if socket == server_socket:
+                # If there isn't an active connection already
+                if client_socket is None:
+                    connection, address = server_socket.accept()
+                    print("Accepted connection from client at " + address[0])
+                    connection.setblocking(False)
+                    client_socket = connection
+            
+            else:
+                msg = socket.recv(32).decode("utf-8").upper()
+                if msg:
+                    received_message = msg
+                else:
+                    socket.close()
+                    client_socket = None
+                    print("Connection closed")
+                    
 
         # Try to match message with regular expression
         match = re.fullmatch(
@@ -271,6 +306,7 @@ def main_webots_loop():
                 #this should solve the problem of the system taking arbitary photos when things are queued.
             
             queue.enqueue(instructions)
+
         elif received_message != "":
             print("Invalid command '%s'." % received_message)
             connection.send(bytes("BAD", "utf-8"))
@@ -284,6 +320,8 @@ def main_webots_loop():
             target_positions_met = True
             for motor, target in curr_instruction.items():
                 if not in_range(motor.get_position(), target):
+                    # print(motor.get_position())
+                    # print(target)
                     target_positions_met = False
                     motor.set_position(target)
             
@@ -291,26 +329,6 @@ def main_webots_loop():
             if target_positions_met:
                 queue.dequeue()
 
-# The socket that we listen for commands on
-server_socket = socket.create_server(("127.0.0.1", 5000))
-server_socket.listen()
-
-print("Waiting for a connection...")
-theostore.step(CONTROL_STEP)  # Needed to display text
-
-# This will block until we establish a connection
-connection, address = server_socket.accept()
-
-# Disable blocking for the incoming connection so Webots doesn't hang while we
-# wait for commands to arrive
-connection.setblocking(False)
-
-print("Established connection!")
-print("Starting webserver and simulation...")
-theostore.step(CONTROL_STEP)
-
-command = [sys.executable, "-m", "http.server", "80", "-d", "images/"]
-image_server = subprocess.Popen(command)
 
 # Start main loop...
 try:
@@ -319,5 +337,7 @@ except KeyboardInterrupt:
     print("Exiting...")
 finally:
     # Executes whether or not an exception was caught
+    if client_socket:
+        client_socket.close()
     server_socket.close()
     image_server.kill()
