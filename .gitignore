@@ -5,3 +5,4 @@ controllers/server/__pycache__/server.cpython-39.pyc
 __pycache__/
 .vscode/settings.json
 server/__pycache__/
+worlds/.store.wbproj
