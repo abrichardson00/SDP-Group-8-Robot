@@ -4,10 +4,14 @@ import re
 import collections
 import subprocess
 import select
+from pyzbar import pyzbar
+from pyzbar.pyzbar import ZBarSymbol
+from PIL import Image
 from controller import Robot
 
 
 ## HELPER CLASSES ##############################################################
+
 
 class Motor:
     """Helper for grouping motors with their position sensors."""
@@ -36,7 +40,10 @@ class Queue(collections.deque):
     def __init__(self, *args):
         super().__init__(self, *args)
     
-    def enqueue(self, iter):
+    def enqueue(self, item):
+        self.append(item)
+
+    def enqueue_all(self, iter):
         self.extend(iter)
     
     def dequeue(self):
@@ -50,6 +57,7 @@ class Queue(collections.deque):
 
 
 ## INIT WEBOTS DEVICES #########################################################
+
 
 theostore = Robot()
 
@@ -76,13 +84,12 @@ weightSense = theostore.getDevice("Weight Sensor")
 
 ## WEBOTS CONSTANTS ############################################################
 
+
 # This is in ms and must be a multiple of the simulation timestep
 CONTROL_STEP = 64 
-CAMERA_SAMPLE_RATE = 512
+CAMERA_SAMPLE_RATE = 64
 
-# TODO: use v_motor.getMaxPosition instead
 MAX_VERTICAL = v_motor.getMaxPosition()
-MIN_VERTICAL = v_motor.getMinPosition() #bit weird because of nudge + offset
 
 # Platform lines up with bottom shelf at this height
 BOTTOM_SHELF = 0.0228  
@@ -92,6 +99,9 @@ SHELF_SPACING = 0.130
 
 # Distance the platform lowers by to reach under each tray
 BELOW_TRAY_OFFSET = -0.0130
+
+# Position that the platform moves to before taking a photo
+TAKE_PHOTO_VERTICAL = 0.48
 
 # Used to slightly offset the platform and the shelf
 # Increase the platform height by this when inserting
@@ -115,6 +125,7 @@ rgrab_motor.enable()
 camera.enable(CAMERA_SAMPLE_RATE)
 weightSense.enable(CAMERA_SAMPLE_RATE)
 
+
 ## INSTRUCTION QUEUE FUNCTIONS #################################################
 
 
@@ -131,6 +142,7 @@ the instruction).
 
 """
 
+
 def in_range(position, target):
     """Checks whether two numbers are very close."""
     return target - 0.005 < position < target + 0.005
@@ -144,7 +156,7 @@ def move_to_tray(level, depth, offset):
     offset -- any additional height offset
     """
     instruction = {
-        v_motor: BOTTOM_SHELF + (level * SHELF_SPACING) + offset,
+        v_motor: BOTTOM_SHELF + (int(level) * SHELF_SPACING) + offset,
         h_motor: MAX_HORIZONTAL if depth == "F" else MIN_HORIZONTAL
     }
     return instruction
@@ -198,7 +210,7 @@ def store(depth, side, level):
     side  -- whether the tray is in the left or right shelf (L|R)
     level -- the level (height) of the tray [0-4]
     """
-    move_to_shelf = move_to_tray(level, depth, +NUDGE)
+    move_to_shelf = move_to_tray(level, depth, +NUDGE*3)
 
     if side == "L":
         extend_grabbers = move_grabbers(1, -1)
@@ -208,7 +220,6 @@ def store(depth, side, level):
     release_tray = move_to_tray(level, depth, BELOW_TRAY_OFFSET)
 
     instructions = [
-        move_below_roof,
         move_to_shelf,
         extend_grabbers,
         release_tray,
@@ -222,7 +233,29 @@ def store(depth, side, level):
 # Steps used in both retrieval AND storage of trays
 move_below_roof = {v_motor: SHELF_ROOF_CLEARANCE, h_motor: MIN_HORIZONTAL}
 ascend_to_roof = {v_motor: MAX_VERTICAL}
+move_to_camera_position = {v_motor: TAKE_PHOTO_VERTICAL}
 retract_grabbers = move_grabbers(0, 0)
+
+
+## IMAGE RECOGNITION ###########################################################
+
+
+def tray_from_barcode(image):
+
+    barcodes = pyzbar.decode(image, symbols=[ZBarSymbol.EAN8])
+    
+    # There are multiple barcodes on the tray for redundancy
+    # If we find none, there is likely no tray
+    # If we find more than one, just read the first one
+    if not barcodes:
+        return None
+
+    data = barcodes[0].data.decode("utf-8")[4:7]
+    if re.fullmatch("[01][01][0-4]", data):
+        data = ("B" if data[0] == "0" else "F") + ("L" if data[1] == "0" else "R") + data[2]
+        return data
+    
+    return None
 
 
 ## MAIN PROGRAM ################################################################
@@ -274,43 +307,34 @@ def main_webots_loop():
                     socket.close()
                     client_socket = None
                     print("Connection closed")
-                    
 
-        # Try to match message with regular expression
-        match = re.fullmatch(
-            "(GET|PUT) ((F|B)(L|R)([0-4]))", 
-            received_message)
 
-        if match:
-            print("Received '%s'." % received_message)
+        # Don't parse any commands while we are busy moving trays around
+        if received_message and queue.empty():
 
-            # match.group returns the bracketed terms in the regex
-            m = match.group
-            command, name = m(1), m(2)
-            depth, side, level = m(3), m(4), int(m(5))
-
-            # Enqueue the appropriate instructions to the queue
-            if command == "GET":
-                instructions = retrieve(depth, side, level)
-                connection.send(bytes("ACK", "utf-8"))
-            
-            elif command == "PUT":
-                instructions = store(depth, side, level)
+            get_command_match = re.fullmatch("GET ([FB][LR][0-4])", received_message)
+            if get_command_match:
+                # match.group(1) returns the bracketed term in the regex
+                # match.group(0) would return the entire string
+                tray_code = get_command_match.group(1)
                 
-                if(queue.empty()):
-                    filename = name + ".jpg"
-                    camera.saveImage("images/" + filename, 90)
-                    connection.send(bytes(filename, "utf-8"))
-                else:
-                    connection.send(bytes("ACK", "utf-8"))
-                #this should solve the problem of the system taking arbitary photos when things are queued.
+                # Enqueue the appropriate instructions to the queue
+                instructions = retrieve(*tray_code)
+                queue.enqueue_all(instructions)
+                connection.send(bytes("ACK\n", "utf-8"))
             
-            queue.enqueue(instructions)
-
-        elif received_message != "":
-            print("Invalid command '%s'." % received_message)
-            connection.send(bytes("BAD", "utf-8"))
+            elif received_message == "PUT":
+                # We need to move to a specific height so the camera can photograph the tray
+                queue.enqueue(move_to_camera_position)
+                connection.send(bytes("ACK\n", "utf-8"))
         
+            else:
+                connection.send(bytes("BAD\n", "utf-8"))
+
+        elif not queue.empty():
+            connection.send(bytes("BUSY\n", "utf-8"))
+        
+
         # If we haven't exhausted the instruction queue
         if not queue.empty():
             # Get current instruction but don't dequeue it yet
@@ -320,15 +344,38 @@ def main_webots_loop():
             target_positions_met = True
             for motor, target in curr_instruction.items():
                 if not in_range(motor.get_position(), target):
-                    # print(motor.get_position())
-                    # print(target)
                     target_positions_met = False
                     motor.set_position(target)
             
-            # If we have fulfilled the current instruction, dequeue it
             if target_positions_met:
-                queue.dequeue()
 
+                """
+                If the instruction we just fulfilled was "move_to_camera_position" then we 
+                need to take a photo of the tray and scan the tray's barcode to determine 
+                where we should store it. 
+                
+                The barcodes contain the trays' [FB][LR][0-4] numbers so we just read that
+                data directly and then pass it to the store method to put the trays back.
+                """
+                if curr_instruction == move_to_camera_position:
+                    # We process the image before saving it to disk in case there isn't a tray on the platform
+                    # Image directly from webots is in BGRA format for some reason, can just ignore the A
+                    image = Image.frombytes("RGB", (1024, 1024), camera.getImage(), "raw", "BGRX")
+                    
+                    # Read the tray's number from the barcode
+                    tray_code = tray_from_barcode(image)
+
+                    if tray_code:
+                        # Asterisk here just unpacks the string into a tuple (e.g. store("F", "R", "3"))
+                        queue.enqueue_all(store(*tray_code))
+                        image.save("images/%s.jpg" % tray_code)
+                    else:
+                        print("No tray on platform, will not attempt to store.")
+                        queue.enqueue(ascend_to_roof)
+
+                # Regardless of what the instruction was, dequeue it now that it has been fulfilled
+                queue.dequeue()
+                
 
 # Start main loop...
 try:
