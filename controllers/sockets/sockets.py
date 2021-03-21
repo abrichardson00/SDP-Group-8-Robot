@@ -331,7 +331,7 @@ def main_webots_loop():
             else:
                 connection.send(bytes("BAD\n", "utf-8"))
 
-        elif not queue.empty():
+        elif received_message and not queue.empty():
             connection.send(bytes("BUSY\n", "utf-8"))
         
 
