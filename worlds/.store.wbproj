@@ -9,4 +9,4 @@ renderingMode: PLAIN
 orthographicViewHeight: 0.855316
 textFiles: -1
 consoles: Console:All:All
-renderingDevicePerspectives: robot:camera;1;0.496094;0.0302241;0.0395948
+renderingDevicePerspectives: robot:camera;1;0.362305;0.0302241;0.0395948
