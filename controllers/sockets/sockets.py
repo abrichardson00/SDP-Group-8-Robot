@@ -4,6 +4,7 @@ import re
 import collections
 import subprocess
 import select
+from hashgenhelper import hashgen
 from pyzbar import pyzbar
 from pyzbar.pyzbar import ZBarSymbol
 from PIL import Image
@@ -267,10 +268,24 @@ image_server = subprocess.Popen(command)
 print("Image server started")
 
 print("Listening on socket")
-server_socket = socket.create_server(("127.0.0.1", 5000), backlog=1)
+
+
+
+failed=True
+portNo=5000
+while(failed):
+    try:
+        server_socket = socket.create_server(("127.0.0.1", portNo), backlog=3)
+        failed=False
+    except:
+        portNo += 1
+        
+        
 server_socket.setblocking(False)
 client_socket = None
-
+#backlog might be causing an error
+connection_hash = hashgen(16)
+print(portNo)
 
 def main_webots_loop():
     queue = Queue()
@@ -295,9 +310,11 @@ def main_webots_loop():
                 # If there isn't an active connection already
                 if client_socket is None:
                     connection, address = server_socket.accept()
+                    connection.send(bytes(connection_hash, "UTF-8"))
                     print("Accepted connection from client at " + address[0])
                     connection.setblocking(False)
                     client_socket = connection
+          
             
             else:
                 msg = socket.recv(32).decode("utf-8").upper()

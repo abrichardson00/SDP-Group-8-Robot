@@ -1,10 +1,16 @@
 import socket
 
+portNo = 5000
+
+
 print("Connecting...")
 
-client_socket = socket.create_connection(("127.0.0.1", 5000))
+client_socket = socket.create_connection(("127.0.0.1", portNo))
 
 print("Connection established!")
+
+theohash = client_socket.recv(32).decode("utf-8")
+print("Client hash received. Hash: %s" % theohash)
 
 while True:
     message = input("Type command (no command will exit):\n")
